@@ -15,7 +15,6 @@ const handleAccessAssignmentProblems = asyncHandler(async (req, res, next) => {
   if (String(assignment.writer) === String(user.info) || hasRole(user)) return next();
 
   const { testPeriod } = assignment;
-
   const now = new Date();
   const start = new Date(testPeriod.start);
   const end = new Date(testPeriod.end);
@@ -26,4 +25,3 @@ const handleAccessAssignmentProblems = asyncHandler(async (req, res, next) => {
 });
 
 exports.handleAccessAssignmentProblem = handleAccessAssignmentProblems;
-

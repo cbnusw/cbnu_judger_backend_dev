@@ -3,7 +3,6 @@ const { createSchema } = require('../../helpers');
 const { searchPlugin } = require('../../plugins');
 const { toRegEx, toRef } = require('../../mappers');
 const Counter = require('./counter.schema.js');
-
 const periodSchema = createSchema({
   start: {
     type: Date,
@@ -19,7 +18,6 @@ const periodSchema = createSchema({
 
 
 const schema = createSchema({
-
   no: { type: Number, index: true },
 
   course: String,
@@ -50,6 +48,7 @@ const schema = createSchema({
 });
 
 schema.index({ createdAt: -1 });
+
 schema.pre('save', async next => {
 
   const record = this;
@@ -61,7 +60,6 @@ schema.pre('save', async next => {
     if (!counter) await Counter.create({ name: 'Assignment' });
     counter.count++;
     await counter.save();
-
     return counter.count;
   }
 })
