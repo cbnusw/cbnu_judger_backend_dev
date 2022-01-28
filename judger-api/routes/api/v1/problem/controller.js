@@ -82,13 +82,13 @@ const createProblem = asyncHandler(async (req, res, next) => {
     updateFilesByUrls(req, doc._id, 'Problem', urls),
     updateFilesByIds(req, doc._id, 'Problem', ids)
   ]);
-  if (parent) await assignToParent(parent, body);
+  if (parent) await assignToParent(parent, doc);
 
   res.json(createResponse(res, doc));
 
   async function assignToParent(parent, problem) {
     parent.problems.push(problem._id);
-    await parent.save()
+    await parent.save();
   }
 });
 
