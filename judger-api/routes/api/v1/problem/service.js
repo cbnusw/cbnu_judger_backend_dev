@@ -1,5 +1,13 @@
+const { Contest, Assignment, Problem } = require('../../../../models');
 const { SUBMIT_TOPIC: topic } = require('../../../../env');
 const { refreshMetaData } = require("../../../../kafka");
+const {
+  PROBLEM_NOT_FOUND,
+  ASSIGNMENT_NOT_FOUND,
+  CONTEST_NOT_FOUND,
+  IS_NOT_TEST_PERIOD
+} = require('../../../../errors');
+
 exports.parentModels = {
   'Assignment': Assignment,
   'Contest': Contest,
@@ -43,15 +51,16 @@ exports.assignTo = async (parent, problem) => {
   parent.problems.push(problem._id);
   await parent.save();
 }
-exports.validateParentOf = ({ writer: problemWriter, parentType, published }, parent) => {
+exports.validateParentOf = ({ parentType, published }, parent) => {
   if (!parentType) return null;
   if (!parent) return parentNotFoundErrors[parentType];
-  const { testPeriod } = parent;
   if (published) {
+    const { testPeriod } = parent;
     const published = new Date(published);
     const end = new Date(testPeriod.end);
     if (published.getTime() < end.getTime()) return INVALID_PROBLEM_PUBLISH;
   }
+  if (!checkTestPeriodOf(parent)) return IS_NOT_TEST_PERIOD;
   return null;
 }
 
@@ -65,9 +74,27 @@ exports.validateByProblem = async (id) => {
   return { problem };
 }
 
+exports.updateFilesOf = async (problem) => {
+  const urls = [problem.content]
+  const ids = [...problem.ioSet.map(io => io.inFile), ...$set.ioSet.map(io => io.outFile)];
+  await Promise.all([
+    updateFilesByUrls(req, problem._id, 'Problem', urls),
+    updateFilesByIds(req, problem._id, 'Problem', ids),
+  ]);
+} 
+
+exports.removeFilesOf = async (problem) => {
+  const urls = [problem.content];
+  const ids = [...problem.ioSet.map(io => io.inFile), ...problem.ioSet.map(io => io.outFile)];
+  await Promise.all([
+    removeFilesByUrls(req, urls),
+    removeFilesByIds(req, ids),
+  ])
+}
+
+
 exports.checkOwnerOf = (target, user) => {
-  if (String(target.writer) === String(user.info)) return true;
-  return false
+  return String(target.writer) === String(user.info);
 }
 
 

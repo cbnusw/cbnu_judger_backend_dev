@@ -4,7 +4,6 @@ const { hasRole } = require('../../../../utils/permission');
 const { updateFilesByIds, updateFilesByUrls, removeFilesByUrls, removeFilesByIds } = require('../../../../utils/file');
 const {
   PROBLEM_NOT_FOUND,
-  AFTER_TEST_START,
 } = require('../../../../errors');
 const asyncHandler = require('express-async-handler');
 const {
@@ -15,7 +14,8 @@ const {
   removeProblemAt,
   parentModels,
   assignTo,
-  checkTestPeriodOf
+  updateFilesOf,
+  removeFilesOf,
 } = require('./service');
 
 const getProblems = asyncHandler(async (req, res, next) => {
@@ -60,12 +60,7 @@ const createProblem = asyncHandler(async (req, res, next) => {
   const err = validateParentOf(body, parent);
   if (err) return next(err);
   const problem = await Problem.create(body);
-  const urls = [body.content];
-  const ids = [...body.ioSet.map(io => io.inFile), ...body.ioSet.map(io => io.outFile)];
-  await Promise.all([
-    updateFilesByUrls(req, problem._id, 'Problem', urls),
-    updateFilesByIds(req, problem._id, 'Problem', ids)
-  ]);
+  await updateFilesOf(body);
   if (parent) await assignTo(parent, problem);
   res.json(createResponse(res, doc));
 });
@@ -76,13 +71,7 @@ const updateProblem = asyncHandler(async (req, res, next) => {
   const {err, problem} = validateByProblem(id);
   if (err) return next(err);
   $set.ioSet = ($set.ioSet || []).map(io => ({ inFile: io.inFile._id, outFile: io.outFile._id }));
-  const urls = [$set.content]
-  const ids = [...$set.ioSet.map(io => io.inFile), ...$set.ioSet.map(io => io.outFile)];
-  await Promise.all([
-    problem.updateOne({ $set }),
-    updateFilesByUrls(req, problem._id, 'Problem', urls),
-    updateFilesByIds(req, problem._id, 'Problem', ids),
-  ]);
+  await Promise.all([problem.updateOne({ $set }), updateFilesOf($set)]);
   res.json(createResponse(res));
 });
 
@@ -92,12 +81,9 @@ const removeProblem = asyncHandler(async (req, res, next) => {
   if (err) return next(err);
   if (parent) await removeProblemAt(parent, id);
   //if (!checkTestPeriodOf(parent)) return next(AFTER_TEST_START);
-  const urls = [problem.content];
-  const ids = [...problem.ioSet.map(io => io.inFile), ...problem.ioSet.map(io => io.outFile)];
   await Promise.all([
     problem.deleteOne(),
-    removeFilesByUrls(req, urls),
-    removeFilesByIds(req, ids),
+    removeFilesOf(problem)
   ]);
   res.json(createResponse(res));
 });
