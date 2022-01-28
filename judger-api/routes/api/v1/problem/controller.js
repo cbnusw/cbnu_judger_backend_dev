@@ -8,6 +8,7 @@ const {
   INVALID_PROBLEM_PUBLISH,
   PROBLEM_NOT_FOUND,
   AFTER_TEST_START,
+  ASSIGNMENT_NOT_FOUND,
 } = require('../../../../errors');
 const asyncHandler = require('express-async-handler');
 // const { producingSubmit } = require('./service');
