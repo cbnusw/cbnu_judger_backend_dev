@@ -22,14 +22,20 @@ const parentNotFoundErrors = {
   'Contest' : CONTEST_NOT_FOUND
 }
 
-const getProblems = (parentType) => asyncHandler(async (req, res, next) => {
-  const { query } = req;
+
+function checkOwnerOf(target, user) {
+  if (String(target.writer) === String(user.info)) return true;
+  return false
+}
+
+const getProblems = asyncHandler(async (req, res, next) => {
+  const { query, query : { parentType, parentId}} = req;
 
   const now = new Date();
 
   const documents = await Problem.search(query, {
     $and: [{ published: { $ne: null } }, { published: { $lte: now } }, { parentType: parentType }]
-  }, [{ path: 'contest', model: Contest }, { path: 'writer', model: UserInfo }])
+  }, [{ path: 'parentId', model: parentModels[parentType] }, { path: 'writer', model: UserInfo }])
 
   res.json(createResponse(res, documents));
 });
@@ -41,7 +47,7 @@ const getProblem = asyncHandler(async (req, res, next) => {
 
   const query = Problem.findById(id).populate({ path: 'writer' });
 
-  if (String(problem.writer) === String(user.info)) {
+  if (hasRole(user) || checkOwnerOf(problem, user)){
     query.populate({ path: 'ioSet.inFile' })
       .populate({ path: 'ioSet.outFile' });
   }
@@ -74,19 +80,19 @@ const createProblem = asyncHandler(async (req, res, next) => {
   const parent = await parentModels[parentType].findById(parentId);
   const err = validateParent(body, parent);
   if (err) return next(err);
- 
-  const doc = await Problem.create(body);
+
+  const problem = await Problem.create(body);
   const urls = [body.content];
   const ids = [...body.ioSet.map(io => io.inFile), ...body.ioSet.map(io => io.outFile)];
   await Promise.all([
-    updateFilesByUrls(req, doc._id, 'Problem', urls),
-    updateFilesByIds(req, doc._id, 'Problem', ids)
+    updateFilesByUrls(req, problem._id, 'Problem', urls),
+    updateFilesByIds(req, problem._id, 'Problem', ids)
   ]);
-  if (parent) await assignToParent(parent, doc);
+  if (parent) await assignTo(parent, problem);
 
   res.json(createResponse(res, doc));
 
-  async function assignToParent(parent, problem) {
+  async function assignTo(parent, problem) {
     parent.problems.push(problem._id);
     await parent.save();
   }
@@ -95,35 +101,40 @@ const createProblem = asyncHandler(async (req, res, next) => {
 
 const updateProblem = asyncHandler(async (req, res, next) => {
   const { params: { id }, body: $set, user } = req;
-  const doc = await Problem.findById(id);
+  const {err, problem} = validateByProblem(id);
+  if (err) return next(err);
 
   $set.ioSet = ($set.ioSet || []).map(io => ({ inFile: io.inFile._id, outFile: io.outFile._id }));
-
-  if (!doc) return next(PROBLEM_NOT_FOUND);
-  if (String(doc.writer) !== String(user.info)) return next(FORBIDDEN);
-
-  const err = validateContest($set);
-  if (err) return next(err);
 
   const urls = [$set.content]
   const ids = [...$set.ioSet.map(io => io.inFile), ...$set.ioSet.map(io => io.outFile)];
   await Promise.all([
-    doc.updateOne({ $set }),
-    updateFilesByUrls(req, doc._id, 'Problem', urls),
-    updateFilesByIds(req, doc._id, 'Problem', ids),
+    problem.updateOne({ $set }),
+    updateFilesByUrls(req, problem._id, 'Problem', urls),
+    updateFilesByIds(req, problem._id, 'Problem', ids),
   ]);
 
   res.json(createResponse(res));
+
+  async function validateByProblem(id) {
+    const problem = await Problem.findById(id).populate('parentId');
+    if (!problem) return {err:PROBLEM_NOT_FOUND};
+    const { parentId : parent } = problem;
+    const err = validateParent(problem, parent);
+    if (err) return { err };
+    if (!hasRole(user) && !checkOwnerOf(problem, user)) return {err:FORBIDDEN};
+    return {problem};
+  }
 });
 
 const removeProblem = asyncHandler(async (req, res, next) => {
   const { params: { id }, user } = req;
-  const doc = await Problem.findById(id);
-  if (!doc) return next(PROBLEM_NOT_FOUND);
+  const problem = await Problem.findById(id);
+  if (!problem) return next(PROBLEM_NOT_FOUND);
 
-  if (!hasRole(user) && String(user.info) !== String(doc.writer)) return next(FORBIDDEN);
+  if (!hasRole(user) && checkOwnerOf(problem, user)) return next(FORBIDDEN);
 
-  const contest = await Contest.findById(doc.contest);
+  const contest = await Contest.findById(problem.contest);
 
   const { testPeriod } = contest;
   const now = new Date();

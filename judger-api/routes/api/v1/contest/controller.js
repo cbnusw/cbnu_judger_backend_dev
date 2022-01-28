@@ -112,31 +112,31 @@ const createContest = asyncHandler(async (req, res, next) => {
 });
 
 
-const createContestProblem = asyncHandler(async (req, res, next) => {
-  const { params: { id }, body, user } = req;
+// const createContestProblem = asyncHandler(async (req, res, next) => {
+//   const { params: { id }, body, user } = req;
 
-  const contest = await Contest.findById(id);
+//   const contest = await Contest.findById(id);
 
-  if (!contest) return next(CONTEST_NOT_FOUND);
-  if (String(contest.writer) !== String(user.info)) return next(FORBIDDEN);
+//   if (!contest) return next(CONTEST_NOT_FOUND);
+//   if (String(contest.writer) !== String(user.info)) return next(FORBIDDEN);
 
-  const { testPeriod } = contest;
-  const now = new Date();
-  const start = new Date(testPeriod.start);
-  if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
+//   const { testPeriod } = contest;
+//   const now = new Date();
+//   const start = new Date(testPeriod.start);
+//   if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
 
-  body.contest = id;
-  body.writer = user.info;
+//   body.contest = id;
+//   body.writer = user.info;
 
-  const problem = await Problem.create(body);
+//   const problem = await Problem.create(body);
 
-  const urls = [body.content, ...(body.ioSet || []).map(io => io.inFile.url), ...(body.ioSet || []).map(io => io.outFile.url)];
-  contest.problems.push(problem._id);
+//   const urls = [body.content, ...(body.ioSet || []).map(io => io.inFile.url), ...(body.ioSet || []).map(io => io.outFile.url)];
+//   contest.problems.push(problem._id);
 
-  await Promise.all([contest.save(), updateFilesByUrls(req, problem._id, 'Problem', urls)]);
+//   await Promise.all([contest.save(), updateFilesByUrls(req, problem._id, 'Problem', urls)]);
 
-  res.json(createResponse(res, problem));
-});
+//   res.json(createResponse(res, problem));
+// });
 
 
 const enrollContest = asyncHandler(async (req, res, next) => {
@@ -214,31 +214,31 @@ const updateContest = asyncHandler(async (req, res, next) => {
 });
 
 
-const updateContestProblem = asyncHandler(async (req, res, next) => {
-  const { params: { id, problemId }, body: $set, user } = req;
+// const updateContestProblem = asyncHandler(async (req, res, next) => {
+//   const { params: { id, problemId }, body: $set, user } = req;
 
-  const contest = await Contest.findById(id);
-  const problem = await Problem.findById(problemId);
+//   const contest = await Contest.findById(id);
+//   const problem = await Problem.findById(problemId);
 
-  if (!contest) return next(CONTEST_NOT_FOUND);
-  if (!problem) return next(PROBLEM_NOT_FOUND);
+//   if (!contest) return next(CONTEST_NOT_FOUND);
+//   if (!problem) return next(PROBLEM_NOT_FOUND);
 
-  if (String(contest.writer) !== String(user.info)) return next(FORBIDDEN);
-  if (String(problem.writer) !== String(user.info)) return next(FORBIDDEN);
-  if (!contest.problems.map(p => String(p)).includes(String(problem._id))) return next(IS_NOT_CONTEST_PROBLEM);
+//   if (String(contest.writer) !== String(user.info)) return next(FORBIDDEN);
+//   if (String(problem.writer) !== String(user.info)) return next(FORBIDDEN);
+//   if (!contest.problems.map(p => String(p)).includes(String(problem._id))) return next(IS_NOT_CONTEST_PROBLEM);
 
-  // const { testPeriod } = contest;
-  // const now = new Date();
-  // const start = new Date(testPeriod.start);
-  // if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
+//   // const { testPeriod } = contest;
+//   // const now = new Date();
+//   // const start = new Date(testPeriod.start);
+//   // if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
 
-  const urls = [...($set.ioSet || []).map(io => io.inFile.url), ...($set.ioSet || []).map(io => io.outFile.url)];
-  if ($set.content) urls.push($set.content);
+//   const urls = [...($set.ioSet || []).map(io => io.inFile.url), ...($set.ioSet || []).map(io => io.outFile.url)];
+//   if ($set.content) urls.push($set.content);
 
-  await Promise.all([problem.updateOne({ $set }), updateFilesByUrls(req, problem._id, 'Problem', urls)]);
+//   await Promise.all([problem.updateOne({ $set }), updateFilesByUrls(req, problem._id, 'Problem', urls)]);
 
-  res.json(createResponse(res));
-});
+//   res.json(createResponse(res));
+// });
 
 const reorderContestProblems = asyncHandler(async (req, res, next) => {
   let { params: { id }, body: { problems }, user } = req;
@@ -280,10 +280,12 @@ exports.getProgressingContests = getProgressingContests;
 exports.getContest = getContest;
 exports.getContestProblems = getContestProblems;
 exports.createContest = createContest;
-exports.createContestProblem = createContestProblem;
+
 exports.enrollContest = enrollContest;
 exports.unenrollContest = unenrollContest;
 exports.updateContest = updateContest;
-exports.updateContestProblem = updateContestProblem;
+
 exports.reorderContestProblems = reorderContestProblems;
 exports.removeContest = removeContest;
+// exports.createContestProblem = createContestProblem;
+// exports.updateContestProblem = updateContestProblem;
