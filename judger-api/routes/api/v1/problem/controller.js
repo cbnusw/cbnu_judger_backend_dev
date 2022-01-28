@@ -1,4 +1,4 @@
-const { Contest, Problem, Submit, UserInfo } = require('../../../../models');
+const { Contest, Assignment, Problem, Submit, UserInfo } = require('../../../../models');
 const { createResponse } = require('../../../../utils/response');
 const { hasRole } = require('../../../../utils/permission');
 const { updateFilesByIds, updateFilesByUrls, removeFilesByUrls, removeFilesByIds } = require('../../../../utils/file');
@@ -11,6 +11,15 @@ const {
 } = require('../../../../errors');
 const asyncHandler = require('express-async-handler');
 // const { producingSubmit } = require('./service');
+
+const parentModels = {
+  'Assignment': Assignment,
+  'Contest' : Contest,
+}
+const parentNotFoundErrors = {
+  'Assignment': ASSIGNMENT_NOT_FOUND,
+  'Contest' : CONTEST_NOT_FOUND
+}
 
 const getProblems = (parentType) => asyncHandler(async (req, res, next) => {
   const { query } = req;
@@ -55,15 +64,16 @@ const createSubmit = asyncHandler(async (req, res, next) => {
 });
 
 
-const createProblem = (parentType) => asyncHandler(async (req, res, next) => {
-  const { body, user } = req;
-
+const createProblem = asyncHandler(async (req, res, next) => {
+  const { body, user, body: {parentType, parentId} } = req;
+  
   body.writer = user.info;
   body.ioSet = (body.ioSet || []).map(io => ({ inFile: io.inFile._id, outFile: io.outFile._id }));
-  body.parentType = parentType;
-  const err = validateContest(parentType, body);
+  
+  const parent = await parentModels[parentType].findById(parentId);
+  const err = validateParent(body, parent);
   if (err) return next(err);
-
+ 
   const doc = await Problem.create(body);
   const urls = [body.content];
   const ids = [...body.ioSet.map(io => io.inFile), ...body.ioSet.map(io => io.outFile)];
@@ -71,8 +81,14 @@ const createProblem = (parentType) => asyncHandler(async (req, res, next) => {
     updateFilesByUrls(req, doc._id, 'Problem', urls),
     updateFilesByIds(req, doc._id, 'Problem', ids)
   ]);
+  if (parent) await assignToParent(parent, body);
 
   res.json(createResponse(res, doc));
+
+  async function assignToParent(parent, problem) {
+    parent.problems.push(problem._id);
+    await parent.save()
+  }
 });
 
 
@@ -135,19 +151,20 @@ const removeProblem = asyncHandler(async (req, res, next) => {
 
 
 // utility functions
-async function validateContest(parentType, problem) {
-  if (problem.contest) {
-    const contest = await Contest.findById(problem.contest);
-    if (!contest) return CONTEST_NOT_FOUND;
-    if (problem.published) {
-      const published = new Date(problem.published);
-      const { testPeriod } = contest;
-      const end = new Date(testPeriod.end);
-      if (published.getTime() < end.getTime()) return INVALID_PROBLEM_PUBLISH;
-    }
-    if (String(problem.writer) !== String(contest.writer)) return FORBIDDEN;
+function validateParent({writer: problemWriter, parentType, published}, parent) {
+  if (!parentType) return null;
+  if (!parent) return parentNotFoundErrors[parentType];
+  const { testPeriod } = parent;
+  if (published) {
+    const published = new Date(published);
+    const end = new Date(testPeriod.end);
+    if (published.getTime() < end.getTime()) return INVALID_PROBLEM_PUBLISH;
   }
-  return null;
+  // const now = new Date();    시험시작 시 더 이상 출제 불가.
+  // const start = new Date(testPeriod.start);
+  // if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
+
+  if (String(problemWriter) !== String(contest.writer)) return FORBIDDEN;
 }
 
 exports.getProblems = getProblems;
