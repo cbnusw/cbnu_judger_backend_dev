@@ -55,7 +55,7 @@ const hasRoles = (...roles) => [
 ];
 
 
-const hasProblemPermission = () => [
+const hasProblemPermission = [
   isAuthenticated,
   (req, res, next) => _hasPermission(req.user, req.parentType ? req.parentType : 'Problem') ? next() : next(FORBIDDEN)
 ];
