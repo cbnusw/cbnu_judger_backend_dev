@@ -165,7 +165,7 @@ function validateParent({writer: problemWriter, parentType, published}, parent) 
   // const start = new Date(testPeriod.start);
   // if (now.getTime() > start.getTime()) return next(AFTER_TEST_START);
 
-  if (String(problemWriter) !== String(contest.writer)) return FORBIDDEN;
+  if (String(problemWriter) !== String(parent.writer)) return FORBIDDEN;
 }
 
 exports.getProblems = getProblems;
