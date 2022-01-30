@@ -1,3 +1,16 @@
+exports.parentModels = {
+  'Assignment': Assignment,
+  'Contest': Contest,
+}
+
+exports.parentNotFoundErrors = {
+  'Assignment': ASSIGNMENT_NOT_FOUND,
+  'Contest': CONTEST_NOT_FOUND
+}
+
+
+
+
 const notOperatorRoles = [
   'staff',    // 교직원(충북대 소속만)
   'student',  // 학생(충북대 소속만)
@@ -11,12 +24,16 @@ const roles = [
 ];
 
 const permissions = [
-  'judge',
+  'Contest',
+  'Assignment',
+  'Problem',
+  'all',
   'qna',
 ];
 
 const fileTypes = [
   'Contest',
+  'Assignment',
   'Problem',
   'Submit'
 ];

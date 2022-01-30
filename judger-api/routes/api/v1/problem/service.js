@@ -12,10 +12,19 @@ exports.parentModels = {
   'Assignment': Assignment,
   'Contest': Contest,
 }
+
+
+exports.parentAssignees = {
+  'Assignment': 'students',
+  'Contest': 'contestants'
+}
+
 exports.parentNotFoundErrors = {
   'Assignment': ASSIGNMENT_NOT_FOUND,
   'Contest': CONTEST_NOT_FOUND
 }
+
+
 exports.producingSubmit = (producer, submitId) => {
   refreshMetaData()
   const payloads = [{
@@ -32,46 +41,56 @@ exports.producingSubmit = (producer, submitId) => {
   });
 };
 
+exports.isPublished = (problem) => {
+  const published = new Date(problem.published);
+  return now.getTime() > published.getTime();
+}
+
+exports.isAssigned = (user, parent) => {
+  return parent[parentAssignees[parentType]].map(assignee => String(assignee)).includes(String(user.info))
+}
 exports.checkTestPeriodOf = ({testPeriod}) => {
   const now = new Date();
   const start = new Date(testPeriod.start);
-  if (now.getTime() > start.getTime()) return false;
+  if (now.getTime() < start.getTime() || now.getTime() > start.getTime()) return false;
   return true;
 }
 
-exports.removeProblemAt = async (parent, problemId) => {
+exports.removeProblemAt = asynchandler(async (parent, problemId) => {
   const index = parent.problems.indexOf(problemId);
   if (index !== -1) {
     parent.problems.splice(index, 1);
     await parent.save();
   }
-}
+})
 
 exports.assignTo = async (parent, problem) => {
   parent.problems.push(problem._id);
   await parent.save();
 }
-exports.validateParentOf = ({ parentType, published }, parent) => {
+exports.validateParentOf = ({ parentType }, parent) => {
   if (!parentType) return null;
   if (!parent) return parentNotFoundErrors[parentType];
-  if (published) {
-    const { testPeriod } = parent;
-    const published = new Date(published);
-    const end = new Date(testPeriod.end);
-    if (published.getTime() < end.getTime()) return INVALID_PROBLEM_PUBLISH;
-  }
-  if (!checkTestPeriodOf(parent)) return IS_NOT_TEST_PERIOD;
+  if (!hasRole(user) && !checkTestPeriodOf(parent)) return IS_NOT_TEST_PERIOD;
   return null;
 }
 
 
 exports.validateByProblem = async (id) => {
   const problem = await Problem.findById(id).populate('parentId');
-  if (!problem) return { err: PROBLEM_NOT_FOUND };
+  if (!problem) return ({ err: PROBLEM_NOT_FOUND });
   const { parentId: parent } = problem;
   const err = validateParentOf(problem, parent);
-  if (err) return { err };
-  return { problem };
+  if (err) return ({ err });
+  return ({ problem });
+}
+
+exports.checkPublishingTime = ({published}, {testPeriod}) => {
+  const { testPeriod } = parent;
+  const published = new Date(published);
+  const end = new Date(testPeriod.end);
+  if (published.getTime() > end.getTime()) return true;
+  return false;
 }
 
 exports.updateFilesOf = async (problem) => {

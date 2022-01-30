@@ -1,7 +1,7 @@
-const { Contest, Assignment, Problem, Submit, UserInfo } = require('../../../../models');
+const { Problem, Submit, UserInfo } = require('../../../../models');
 const { createResponse } = require('../../../../utils/response');
 const { hasRole } = require('../../../../utils/permission');
-const { updateFilesByIds, updateFilesByUrls, removeFilesByUrls, removeFilesByIds } = require('../../../../utils/file');
+const { updateFilesByUrls } = require('../../../../utils/file');
 const {
   PROBLEM_NOT_FOUND,
 } = require('../../../../errors');
@@ -42,7 +42,7 @@ const getProblem = asyncHandler(async (req, res, next) => {
 
 const createSubmit = asyncHandler(async (req, res, next) => {
   const { params: { id }, body, user } = req;
-  // const producer = req.app.get('submitProducer');
+  const producer = req.app.get('submitProducer');
   body.problem = id;
   body.user = user.info;
   const submit = await Submit.create(body);
@@ -59,6 +59,8 @@ const createProblem = asyncHandler(async (req, res, next) => {
   const parent = await parentModels[parentType].findById(parentId);
   const err = validateParentOf(body, parent);
   if (err) return next(err);
+  if (published && !validatePublishingTimeOf(body, parent))
+    return ({ err: INVALID_PROBLEM_PUBLISH });
   const problem = await Problem.create(body);
   await updateFilesOf(body);
   if (parent) await assignTo(parent, problem);
@@ -68,8 +70,9 @@ const createProblem = asyncHandler(async (req, res, next) => {
 
 const updateProblem = asyncHandler(async (req, res, next) => {
   const { params: { id }, body: $set, user} = req;
-  const {err, problem} = validateByProblem(id);
+  const {err, problem} = await validateByProblem(id);
   if (err) return next(err);
+  if (!hasRole(user) && !checkOwnerOf(problem, user)) return next(FORBIDDEN);
   $set.ioSet = ($set.ioSet || []).map(io => ({ inFile: io.inFile._id, outFile: io.outFile._id }));
   await Promise.all([problem.updateOne({ $set }), updateFilesOf($set)]);
   res.json(createResponse(res));
@@ -79,8 +82,8 @@ const removeProblem = asyncHandler(async (req, res, next) => {
   const { params: { id }} = req;
   const {err, problem, problem: {parentId: parent}} = await validateByProblem(id);
   if (err) return next(err);
+  if (!hasRole(user) && !checkOwnerOf(problem, user)) return next(FORBIDDEN);
   if (parent) await removeProblemAt(parent, id);
-  //if (!checkTestPeriodOf(parent)) return next(AFTER_TEST_START);
   await Promise.all([
     problem.deleteOne(),
     removeFilesOf(problem)

@@ -1,4 +1,4 @@
-const { Contest, Problem } = require('../../../../models');
+const { Contest } = require('../../../../models');
 const { findImageUrlFromHtml, updateFilesByUrls } = require('../../../../utils/file');
 const { createResponse } = require('../../../../utils/response');
 const asyncHandler = require('express-async-handler');
@@ -9,8 +9,6 @@ const {
   CONTEST_NOT_FOUND,
   CONTEST_ENROLLED,
   FORBIDDEN,
-  IS_NOT_CONTEST_PROBLEM,
-  PROBLEM_NOT_FOUND,
   PROGRESSING_CONTEST,
 } = require('../../../../errors');
 
