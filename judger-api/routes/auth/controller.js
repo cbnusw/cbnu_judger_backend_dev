@@ -1,9 +1,9 @@
 const asyncHandler = require('express-async-handler');
 const axios = require('axios');
-const { AUTH_APP_HOST } = require('../../env');
+const { AUTH_APP_HOST, ADMIN_PAGE_IP } = require('../../env');
 const { UserInfo } = require('../../models');
 const { createResponse } = require('../../utils/response');
-
+const { hasRoles } = require('../../utils/permission.js'); 
 const getMe = asyncHandler(async (req, res, next) => {
   const { user } = req;
 
@@ -39,7 +39,7 @@ const login = asyncHandler(async (req, res, next) => {
     } else {
       await UserInfo.create({ ...info, permissions });
     }
-
+    if (req.headers('isAdminPage') && !hasRoles(me)) return next(FORBIDDEN); 
     res.json(createResponse(res, tokens, 201));
   } catch (e) {
     next(e.response && e.response.data || e);
