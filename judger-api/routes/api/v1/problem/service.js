@@ -71,7 +71,7 @@ exports.assignTo = async (parent, problem) => {
 exports.validateParentOf = ({ parentType }, parent) => {
   if (!parentType) return null;
   if (!parent) return parentNotFoundErrors[parentType];
-  if (!hasRole(user) && !checkTestPeriodOf(parent)) return IS_NOT_TEST_PERIOD;
+  // if (!hasRole(user) && !checkTestPeriodOf(parent)) return IS_NOT_TEST_PERIOD;
   return null;
 }
 
@@ -79,7 +79,7 @@ exports.validateParentOf = ({ parentType }, parent) => {
 exports.validateByProblem = async (id) => {
   const problem = await Problem.findById(id).populate('parentId');
   if (!problem) return ({ err: PROBLEM_NOT_FOUND });
-  const { parentId: parent } = problem;
+  const { parent } = problem;
   const err = validateParentOf(problem, parent);
   if (err) return ({ err });
   return ({ problem });

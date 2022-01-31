@@ -53,10 +53,10 @@ const createSubmit = asyncHandler(async (req, res, next) => {
 
 
 const createProblem = asyncHandler(async (req, res, next) => {
-  const { body, user, body: {parentType, parentId} } = req;
+  const { body, user, body: {parentType, parent} } = req;
   body.writer = user.info;
   body.ioSet = (body.ioSet || []).map(io => ({ inFile: io.inFile._id, outFile: io.outFile._id }));
-  const parent = await parentModels[parentType].findById(parentId);
+  parent = await parentModels[parentType].findById(parent);
   const err = validateParentOf(body, parent);
   if (err) return next(err);
   if (published && !validatePublishingTimeOf(body, parent))
@@ -80,7 +80,7 @@ const updateProblem = asyncHandler(async (req, res, next) => {
 
 const removeProblem = asyncHandler(async (req, res, next) => {
   const { params: { id }} = req;
-  const {err, problem, problem: {parentId: parent}} = await validateByProblem(id);
+  const {err, problem, problem: {parent}} = await validateByProblem(id);
   if (err) return next(err);
   if (!hasRole(user) && !checkOwnerOf(problem, user)) return next(FORBIDDEN);
   if (parent) await removeProblemAt(parent, id);
