@@ -56,13 +56,13 @@ exports.checkTestPeriodOf = ({testPeriod}) => {
   return true;
 }
 
-exports.removeProblemAt = asynchandler(async (parent, problemId) => {
+exports.removeProblemAt = async (parent, problemId) => {
   const index = parent.problems.indexOf(problemId);
   if (index !== -1) {
     parent.problems.splice(index, 1);
     await parent.save();
   }
-})
+}
 
 exports.assignTo = async (parent, problem) => {
   parent.problems.push(problem._id);
@@ -86,8 +86,7 @@ exports.validateByProblem = async (id) => {
 }
 
 exports.checkPublishingTime = ({published}, {testPeriod}) => {
-  const { testPeriod } = parent;
-  const published = new Date(published);
+  published = new Date(published);
   const end = new Date(testPeriod.end);
   if (published.getTime() > end.getTime()) return true;
   return false;

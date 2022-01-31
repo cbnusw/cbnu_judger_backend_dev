@@ -1,13 +1,3 @@
-exports.parentModels = {
-  'Assignment': Assignment,
-  'Contest': Contest,
-}
-
-exports.parentNotFoundErrors = {
-  'Assignment': ASSIGNMENT_NOT_FOUND,
-  'Contest': CONTEST_NOT_FOUND
-}
-
 
 
 
