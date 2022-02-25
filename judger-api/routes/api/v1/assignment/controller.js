@@ -238,6 +238,19 @@ const removeAssignment = asyncHandler(async (req, res, next) => {
   res.json(createResponse(res));
 });
 
+const getAssignmentProblemsSubmits = asyncHandler( async (req, res, next) => {
+  const { params: { id }, user } = req;
+  
+  const assignment = await Assignment.findOne({_id: id}).populate({path: "problems", select: [ "title","published", "score", "_id"], populate: {path: "submits", select: ['user', 'result', 'language', 'source', 'createdAt', "_id"], populate: {path: "user", select: ['name', 'email']}}});
+  
+  if (!assignment) return next(ASSIGNMENT_NOT_FOUND);
+
+  if (String(assignment.writer) !== String(user.info)) {
+    return next(FORBIDDEN);
+  }
+  res.json(createResponse(res, assignment))
+})
+
 
 exports.getAssignments = getAssignments;
 exports.getMyAssignments = getMyAssignments;
@@ -253,3 +266,4 @@ exports.updateAssignment = updateAssignment;
 exports.updateAssignmentProblem = updateAssignmentProblem;
 exports.reorderAssignmentProblems = reorderAssignmentProblems;
 exports.removeAssignment = removeAssignment;
+exports.getAssignmentProblemsSubmits = getAssignmentProblemsSubmits;

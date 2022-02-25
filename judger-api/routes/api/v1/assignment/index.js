@@ -17,6 +17,7 @@ router.get(
   handleAccessAssignmentProblem,
   controller.getAssignmentProblems
 );
+router.get('/:id/user', isAuthenticated, controller.getAssignmentProblemsSubmits);
 
 router.post('/', ...hasRole(), controller.createAssignment);
 router.post('/:id/problem', ...hasRole(), controller.createAssignmentProblem);
