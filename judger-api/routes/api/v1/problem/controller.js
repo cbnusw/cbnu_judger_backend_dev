@@ -49,6 +49,9 @@ const createSubmit = asyncHandler(async (req, res, next) => {
   if (!body.parent || !body.parentId) next(CONTEST_NOT_FOUND);
   body.user = user.info;
   const submit = await Submit.create(body);
+  const parent = await Problem.findById(id);
+  parent.submits.push(submit._id);
+  await parent.save();
   await producingSubmit(producer, String(submit._id));
   await updateFilesByUrls(user, submit._id, 'Submit', [submit.source])
   res.json(createResponse(res, submit));

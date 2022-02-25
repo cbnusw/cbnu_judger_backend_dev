@@ -68,7 +68,12 @@ const schema = createSchema({
     type: Schema.Types.ObjectId,
     ref: 'UserInfo',
     index: true,
-  }
+  },
+  submits: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Submit',
+    required: true,
+  }]
 });
 
 schema.plugin(searchPlugin({
